@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポケカ戦績＆環境アナライザー - Rainbow Vivid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Rainbow Vivid Background Animation */
+        @keyframes rainbowBackground {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            background: linear-gradient(-45deg, #ff0040, #ff8000, #ffbf00, #40ff00, #00bfff, #8000ff, #ff00ff);
+            background-size: 400% 400%;
+            animation: rainbowBackground 15s ease infinite;
+            color: #ffffff;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Neon Buttons */
+        .neon-btn-primary {
+            background: linear-gradient(90deg, #ff00cc, #333399);
+            box-shadow: 0 0 10px rgba(255, 0, 204, 0.5), 0 0 20px rgba(255, 0, 204, 0.3);
+            transition: all 0.3s ease;
+        }
+        .neon-btn-primary:hover {
+            box-shadow: 0 0 15px rgba(255, 0, 204, 0.8), 0 0 30px rgba(255, 0, 204, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .neon-btn-secondary {
+            background: linear-gradient(90deg, #00f2fe, #4facfe);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5), 0 0 20px rgba(0, 242, 254, 0.3);
+            transition: all 0.3s ease;
+        }
+        .neon-btn-secondary:hover {
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.8), 0 0 30px rgba(0, 242, 254, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.6);
+        }
+
+        /* Input styling */
+        textarea, input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            transition: border-color 0.3s ease;
+        }
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #00f2fe;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.5);
+        }
+
+        /* Table styling */
+        th, td {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Spinner */
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top: 4px solid #00f2fe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .border-t-pink-500 {
+            border-top-color: #ff00cc;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <header class="text-center mb-10 mt-4">
+        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-wider drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            ポケカ戦績＆環境アナライザー
+        </h1>
+        <p class="mt-3 text-lg text-gray-200 drop-shadow-md">自分の戦績分析と、最新環境のAIサーチ機能</p>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Section 1: Match Records -->
+        <section class="glass-panel p-6 sm:p-8 flex flex-col h-full overflow-hidden">
+            <h2 class="text-2xl font-bold mb-4 flex items-center border-b border-white/20 pb-2">
+                <span class="mr-2 text-pink-400">📝</span> 戦績記録＆AI分析
+            </h2>
+            <p class="text-sm text-gray-300 mb-4">
+                対戦記録やメモを入力してください。AIが勝因・敗因、活躍カード、改善案を分析し、データをクラウドに保存します。<br>
+                <code class="bg-black/50 px-2 py-1 rounded text-pink-300 block mt-2 text-xs">例: ドラパルトex vs リザードンex 勝ち。序盤にファントムダイブが決まって有利に進められた。</code>
+            </p>
+            
+            <textarea id="recordsInput" rows="5" class="w-full rounded-lg p-4 mb-4 resize-none text-sm" placeholder="ドラパルトex vs パオジアンex 勝ち。手札干渉が刺さった。&#10;ドラパルトex vs タケルライコex 負け。後攻1ターン目に倒されてしまった。"></textarea>
+
+            <button id="analyzeBtn" class="neon-btn-primary w-full py-3 rounded-lg font-bold text-lg mb-4 flex justify-center items-center">
+                <span id="analyzeBtnText">AIで戦績を分析して保存</span>
+                <div id="analyzeLoader" class="loader w-5 h-5 ml-3 hidden border-t-pink-500" style="border-width: 3px;"></div>
+            </button>
+
+            <!-- Analysis Results (Latest) -->
+            <div id="latestAnalysisResult" class="hidden mb-6 bg-black/40 rounded-lg p-4 border border-pink-500/30">
+                <h3 class="text-lg font-bold text-pink-300 mb-2">今回の分析結果</h3>
+                <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+                    <div class="bg-white/5 p-2 rounded"><span class="text-gray-400 block text-xs">主に使用したデッキ</span><span id="resDeck" class="font-bold"></span></div>
+                    <div class="bg-white/5 p-2 rounded"><span class="text-gray-400 block text-xs">成績</span><span id="resScore" class="font-bold"></span></div>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <div><span class="text-cyan-300 font-bold block mb-1">勝因と敗因</span><p id="resReason" class="text-gray-200"></p></div>
+                    <div><span class="text-yellow-300 font-bold block mb-1">活躍したカード (MVP)</span><p id="resMvp" class="text-gray-200"></p></div>
+                    <div><span class="text-green-300 font-bold block mb-1">改善案</span><p id="resImprove" class="text-gray-200"></p></div>
+                </div>
+            </div>
+
+            <!-- Cumulative Stats -->
+            <div class="flex-1 flex flex-col min-h-[200px]">
+                <h3 class="text-lg font-semibold mb-2 text-blue-300 flex items-center justify-between">
+                    <span>デッキ別 蓄積戦績</span>
+                    <span class="text-xs font-normal text-gray-400 bg-black/50 px-2 py-1 rounded">Firebase Cloud Data</span>
+                </h3>
+                <div class="overflow-y-auto overflow-x-auto rounded-lg border border-white/20 bg-black/40 flex-1 relative">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="sticky top-0 bg-[#1a1a2e]">
+                            <tr>
+                                <th class="p-2 font-semibold">デッキ</th>
+                                <th class="p-2 font-semibold text-center">試合</th>
+                                <th class="p-2 font-semibold text-center text-green-400">勝</th>
+                                <th class="p-2 font-semibold text-center text-red-400">負</th>
+                                <th class="p-2 font-semibold text-center text-yellow-300">率</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analysisTableBody">
+                            <tr><td colspan="5" class="p-4 text-center text-gray-400">データを読み込み中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="analysisMessage" class="mt-4 text-center text-red-400 hidden text-sm"></div>
+            </div>
+        </section>
+
+        <!-- Section 2: Meta Search & AI Analysis -->
+        <section class="glass-panel p-6 sm:p-8 flex flex-col h-full">
+            <h2 class="text-2xl font-bold mb-4 flex items-center border-b border-white/20 pb-2">
+                <span class="mr-2 text-cyan-400">🔍</span> 環境＆相性分析 (AIサーチ)
+            </h2>
+            <p class="text-sm text-gray-300 mb-4">
+                あなたが現在使用しているデッキ名を入力してサーチを押すと、直近のシティリーグ環境予測と、そのデッキの環境相性サマリーをAIが生成します。
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                <input type="text" id="currentDeckInput" value="ドラパルトex" class="flex-1 rounded-lg p-3 text-lg font-semibold" placeholder="現在使用中のデッキ (例: ドラパルトex)">
+                <button id="searchMetaBtn" class="neon-btn-secondary px-8 py-3 rounded-lg font-bold text-lg whitespace-nowrap">
+                    サーチ
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden flex-col items-center justify-center py-10 flex-1">
+                <div class="loader mb-4"></div>
+                <p class="text-cyan-300 animate-pulse font-semibold">Gemini AIが環境を分析中...</p>
+            </div>
+
+            <!-- AI Results Container -->
+            <div id="aiResultContainer" class="hidden flex-1 overflow-auto bg-black/40 rounded-lg border border-white/20 p-5">
+                <div id="aiResultText" class="whitespace-pre-wrap text-sm leading-relaxed text-gray-100">
+                    <!-- AI response injected here -->
+                </div>
+            </div>
+            <div id="aiErrorMessage" class="mt-4 text-center text-red-400 hidden bg-black/50 p-3 rounded"></div>
+
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        let firebaseConfig = {};
+        try { firebaseConfig = JSON.parse(firebaseConfigStr); } catch (e) { console.error("Firebase config parse error", e); }
+        
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let userId = null;
+        let matchHistoryRef = null;
+
+        // UI Elements
+        const recordsInput = document.getElementById('recordsInput');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const analyzeBtnText = document.getElementById('analyzeBtnText');
+        const analyzeLoader = document.getElementById('analyzeLoader');
+        const latestAnalysisResult = document.getElementById('latestAnalysisResult');
+        const resDeck = document.getElementById('resDeck');
+        const resScore = document.getElementById('resScore');
+        const resReason = document.getElementById('resReason');
+        const resMvp = document.getElementById('resMvp');
+        const resImprove = document.getElementById('resImprove');
+        const analysisTableBody = document.getElementById('analysisTableBody');
+        const analysisMessage = document.getElementById('analysisMessage');
+        
+        const currentDeckInput = document.getElementById('currentDeckInput');
+        const searchMetaBtn = document.getElementById('searchMetaBtn');
+        const loadingState = document.getElementById('loadingState');
+        const aiResultContainer = document.getElementById('aiResultContainer');
+        const aiResultText = document.getElementById('aiResultText');
+        const aiErrorMessage = document.getElementById('aiErrorMessage');
+
+        function showMessage(element, text) {
+            element.textContent = text;
+            element.classList.remove('hidden');
+        }
+
+        // Initialize App & Auth
+        async function initApp() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                userId = auth.currentUser?.uid;
+                if (!userId) throw new Error("Authentication failed");
+
+                // Set up Firestore listener for accumulated data
+                matchHistoryRef = collection(db, 'artifacts', appId, 'users', userId, 'matchAnalyses');
+                
+                onSnapshot(matchHistoryRef, (snapshot) => {
+                    const stats = {};
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const deck = data.mainDeck || '不明なデッキ';
+                        if (!stats[deck]) {
+                            stats[deck] = { wins: 0, losses: 0, total: 0 };
+                        }
+                        stats[deck].wins += (data.wins || 0);
+                        stats[deck].losses += (data.losses || 0);
+                        stats[deck].total += (data.wins || 0) + (data.losses || 0);
+                    });
+                    renderStatsTable(stats);
+                }, (error) => {
+                    console.error("Firestore listener error:", error);
+                    analysisTableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">データの読み込みに失敗しました</td></tr>';
+                });
+
+            } catch (error) {
+                console.error("Initialization error:", error);
+                analysisTableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">認証エラーが発生しました</td></tr>';
+            }
+        }
+
+        function renderStatsTable(stats) {
+            analysisTableBody.innerHTML = '';
+            const deckNames = Object.keys(stats);
+            if (deckNames.length === 0) {
+                analysisTableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">データがまだありません。戦績を分析して保存しましょう！</td></tr>';
+                return;
+            }
+
+            deckNames.sort((a, b) => stats[b].total - stats[a].total).forEach(deck => {
+                const data = stats[deck];
+                const winRate = data.total > 0 ? Math.round((data.wins / data.total) * 100) : 0;
+                
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 transition-colors border-b border-white/10";
+                tr.innerHTML = `
+                    <td class="p-2 font-medium truncate max-w-[120px]" title="${deck}">${deck}</td>
+                    <td class="p-2 text-center">${data.total}</td>
+                    <td class="p-2 text-center text-green-400 font-bold">${data.wins}</td>
+                    <td class="p-2 text-center text-red-400 font-bold">${data.losses}</td>
+                    <td class="p-2 text-center text-yellow-300 font-bold">${winRate}%</td>
+                `;
+                analysisTableBody.appendChild(tr);
+            });
+        }
+
+        // --- Feature 1: Analyze Match Records with Gemini ---
+        analyzeBtn.addEventListener('click', async () => {
+            if (!userId) {
+                showMessage(analysisMessage, "認証が完了していません。しばらくお待ちください。");
+                return;
+            }
+            
+            const text = recordsInput.value.trim();
+            if (!text) {
+                showMessage(analysisMessage, "記録が入力されていません。");
+                latestAnalysisResult.classList.add('hidden');
+                return;
+            }
+
+            analysisMessage.classList.add('hidden');
+            analyzeBtn.disabled = true;
+            analyzeBtnText.textContent = "AI分析中...";
+            analyzeLoader.classList.remove('hidden');
+            analyzeLoader.style.display = 'block';
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = "あなたはポケカのトッププレイヤーでありコーチです。ユーザーが入力した対戦記録（複数試合含む）を分析し、指定されたJSONスキーマに従って結果を返してください。";
+            const userPrompt = `
+以下のポケモンカードの対戦記録を分析してください。
+記録には対戦相手、勝敗、メモなどが含まれる場合があります。
+全体の「勝ち数」「負け数」を集計し、文章から読み取れる「勝因と敗因」「活躍したカード（MVP）」「今後の改善案」を推測・分析してください。
+また、ユーザーが主に使用している「自分のデッキ名」も抽出してください。
+
+対戦記録:
+${text}
+`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            wins: { type: "INTEGER", description: "全体の勝ち数" },
+                            losses: { type: "INTEGER", description: "全体の負け数" },
+                            winLossReason: { type: "STRING", description: "推測される勝因と敗因のまとめ" },
+                            mvpCard: { type: "STRING", description: "活躍したカード（推測）" },
+                            improvementPlan: { type: "STRING", description: "プレイングや構築の改善案" },
+                            mainDeck: { type: "STRING", description: "ユーザーが主に使用したデッキ名" }
+                        },
+                        required: ["wins", "losses", "winLossReason", "mvpCard", "improvementPlan", "mainDeck"]
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("API request failed");
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const jsonStr = candidate.content.parts[0].text;
+                    const analysisData = JSON.parse(jsonStr);
+
+                    // Display Latest Result
+                    resDeck.textContent = analysisData.mainDeck;
+                    resScore.textContent = `${analysisData.wins}勝 ${analysisData.losses}敗`;
+                    resReason.textContent = analysisData.winLossReason;
+                    resMvp.textContent = analysisData.mvpCard;
+                    resImprove.textContent = analysisData.improvementPlan;
+                    
+                    latestAnalysisResult.classList.remove('hidden');
+                    // Add fade-in animation
+                    latestAnalysisResult.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
+                    
+                    // Save to Firebase
+                    await addDoc(matchHistoryRef, {
+                        ...analysisData,
+                        rawInput: text,
+                        createdAt: serverTimestamp()
+                    });
+
+                    recordsInput.value = ''; // clear input after success
+
+                } else {
+                    throw new Error("Invalid response format");
+                }
+            } catch (error) {
+                console.error("Analysis Error:", error);
+                showMessage(analysisMessage, "分析中にエラーが発生しました。");
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtnText.textContent = "AIで戦績を分析して保存";
+                analyzeLoader.classList.add('hidden');
+                analyzeLoader.style.display = 'none';
+            }
+        });
+
+
+        // --- Feature 2: Gemini API Meta Search & Matchup Analysis ---
+        searchMetaBtn.addEventListener('click', async () => {
+            const deckName = currentDeckInput.value.trim();
+            if (!deckName) {
+                showMessage(aiErrorMessage, "デッキ名を入力してください。");
+                return;
+            }
+
+            // UI State updates
+            aiErrorMessage.classList.add('hidden');
+            aiResultContainer.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            loadingState.style.display = 'flex'; 
+
+            const apiKey = ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemInstruction = "あなたはポケモンカードのトッププレイヤーであり、環境(メタ)分析の専門家です。簡潔で分かりやすく、視覚的に見やすいテキスト（Markdown風の装飾記号などを活用）で出力してください。";
+            const userPrompt = `
+現在のポケカ環境において、架空の最新データを用いて以下の分析を行ってください。
+
+指定された自分のデッキ: 「${deckName}」
+
+以下の構成で見出しを付けて出力してください。
+【１．直近3日間のシティリーグ上位デッキ分布】
+※ポケカブックなどで見られるような、優勝・準優勝・ベスト4のデッキ分布のリアルなモックデータ（割合や入賞数）を作成して提示してください。
+
+【２．現在の環境サマリー】
+※上記分布に基づく、現在のティア(Tier)や環境の特徴を簡潔に解説してください。
+
+【３．「${deckName}」の環境相性サマリー】
+※指定された自分のデッキが、上位のデッキに対してそれぞれ有利か不利か、またどのような立ち回りが求められるかを分析してください。
+`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`APIリクエストに失敗しました (Status: ${response.status})`);
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    let text = candidate.content.parts[0].text;
+                    
+                    text = text.replace(/【(.*?)】/g, '<h4 class="text-xl font-bold text-pink-300 mt-6 mb-2 border-b border-pink-300/30 pb-1">【$1】</h4>');
+                    text = text.replace(/\*\*(.*?)\*\*/g, '<span class="text-cyan-300 font-bold">$1</span>');
+                    text = text.replace(/\*(.*?)\*/g, '<span class="text-yellow-300">$1</span>');
+
+                    aiResultText.innerHTML = text;
+                    
+                    loadingState.style.display = 'none';
+                    loadingState.classList.add('hidden');
+                    aiResultContainer.classList.remove('hidden');
+                    
+                    aiResultContainer.style.opacity = '0';
+                    setTimeout(() => {
+                        aiResultContainer.style.transition = 'opacity 0.6s ease';
+                        aiResultContainer.style.opacity = '1';
+                    }, 50);
+                } else {
+                    throw new Error("Unexpected response format");
+                }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                loadingState.style.display = 'none';
+                loadingState.classList.add('hidden');
+                showMessage(aiErrorMessage, "AIの分析中にエラーが発生しました。時間をおいて再度お試しください。");
+            }
+        });
+
+        // Bootstrap
+        initApp();
+    </script>
+</body>
+</html>
